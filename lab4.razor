@@ -1,0 +1,72 @@
+﻿@page "/todo"
+@using BlazorHybridApp.Data
+@using System.Text.Json
+@using System.IO
+@using Microsoft.Maui.Storage
+
+<h3>Todo List (@todos.Count(todo => !todo.IsDone))</h3>
+
+<!-- Buttons for Saving and Loading -->
+<button @onclick="Save">Save</button>
+<button @onclick="Load">Load</button>
+
+<!-- Todo List Display -->
+<ul>
+    @foreach (var todo in todos)
+    {
+        <li>
+            <input type="checkbox" @bind="todo.IsDone" />
+            <input @bind="todo.Title" placeholder="Task name" />
+        </li>
+    }
+</ul>
+
+<!-- Input to Add a New Todo -->
+<input placeholder="Enter task" @bind="newTodo" />
+<button @onclick="AddTodo">Add Todo</button>
+
+@code {
+    private List<TodoItem> todos = new();
+    private string? newTodo;
+
+    private void AddTodo()
+    {
+        if (!string.IsNullOrWhiteSpace(newTodo))
+        {
+            todos.Add(new TodoItem { Title = newTodo });
+            newTodo = string.Empty;
+        }
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            var path = Path.Combine(FileSystem.AppDataDirectory, "todo.json");
+            var contents = JsonSerializer.Serialize(todos);
+            await File.WriteAllTextAsync(path, contents);
+            await App.Current.MainPage.DisplayAlert("Saved", "Your tasks have been saved!", "OK");
+        }
+        catch (Exception ex)
+        {
+            await App.Current.MainPage.DisplayAlert("Error", $"Failed to save tasks: {ex.Message}", "OK");
+        }
+    }
+
+    private void Load()
+    {
+        try
+        {
+            var path = Path.Combine(FileSystem.AppDataDirectory, "todo.json");
+            if (File.Exists(path))
+            {
+                var contents = File.ReadAllText(path);
+                todos = JsonSerializer.Deserialize<List<TodoItem>>(contents) ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Current.MainPage.DisplayAlert("Error", $"Failed to load tasks: {ex.Message}", "OK");
+        }
+    }
+}
